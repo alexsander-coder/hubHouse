@@ -1,0 +1,59 @@
+﻿@baseUrl = http://localhost:3000
+@contentType = application/json
+
+### 1) Registrar usuario (copie verificationTokenForDev da resposta)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Ana Souza",
+  "email": "ana@example.com",
+  "password": "SenhaForte@2026"
+}
+
+### 2) Verificar email em modo dev (cole token retornado no passo 1)
+POST {{baseUrl}}/auth/verify-email
+Content-Type: {{contentType}}
+
+{
+  "token": "COLE_AQUI_O_VERIFICATION_TOKEN"
+}
+
+### 3) Solicitar recuperacao de senha (dev retorna resetTokenForDev)
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: {{contentType}}
+
+{
+  "email": "ana@example.com"
+}
+
+### 4) Redefinir senha em modo dev (cole token retornado no passo 3)
+POST {{baseUrl}}/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "token": "COLE_AQUI_O_RESET_TOKEN",
+  "password": "NovaSenhaForte@2026"
+}
+
+### 5) Login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "ana@example.com",
+  "password": "NovaSenhaForte@2026"
+}
+
+### 6) Criar primeiro lar (free: max 1)
+POST {{baseUrl}}/households
+Content-Type: {{contentType}}
+Authorization: Bearer COLE_AQUI_ACCESS_TOKEN
+
+{
+  "name": "Lar da Ana"
+}
+
+### 7) Obter perfil + limites de plano + onboarding
+GET {{baseUrl}}/users/me
+Authorization: Bearer COLE_AQUI_ACCESS_TOKEN

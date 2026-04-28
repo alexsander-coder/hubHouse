@@ -1,0 +1,167 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanTier {
+  FREE
+  PRO
+}
+
+enum HouseholdRole {
+  HOST
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum DocumentCategory {
+  IDENTIDADE
+  SAUDE
+  ESCOLA
+  FINANCEIRO
+  IMOVEL
+  OUTROS
+}
+
+enum EventCategory {
+  CASA
+  SAUDE
+  ESCOLA
+  FINANCEIRO
+  PESSOAL
+  OUTROS
+}
+
+enum EventRecurrence {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model User {
+  id                         String            @id @default(uuid())
+  name                       String
+  email                      String            @unique
+  passwordHash               String
+  emailVerified              Boolean           @default(false)
+  emailVerificationTokenHash String?
+  emailVerificationExpiresAt DateTime?
+  passwordResetTokenHash     String?
+  passwordResetExpiresAt     DateTime?
+  refreshTokenHash           String?
+  planTier                   PlanTier          @default(FREE)
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+  ownedHouseholds            Household[]       @relation("HouseholdOwner")
+  memberships                HouseholdMember[]
+  sentInvites                Invite[]          @relation("InviteCreator")
+  uploadedDocuments          Document[]        @relation("DocumentUploader")
+  createdEvents              Event[]           @relation("EventCreator")
+}
+
+model Household {
+  id          String            @id @default(uuid())
+  name        String
+  ownerUserId String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  owner       User              @relation("HouseholdOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members     HouseholdMember[]
+  invites     Invite[]
+  documents   Document[]
+  events      Event[]
+
+  @@index([ownerUserId])
+}
+
+model HouseholdMember {
+  id          String        @id @default(uuid())
+  householdId String
+  userId      String
+  role        HouseholdRole
+  createdAt   DateTime      @default(now())
+  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents   Document[]
+  events      Event[]
+
+  @@unique([householdId, userId])
+  @@index([userId])
+}
+
+model Invite {
+  id              String        @id @default(uuid())
+  householdId     String
+  email           String
+  role            HouseholdRole
+  invitedByUserId String
+  tokenHash       String        @unique
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  household       Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  invitedBy       User          @relation("InviteCreator", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@index([email])
+}
+
+model Document {
+  id               String           @id @default(uuid())
+  householdId      String
+  ownerMemberId    String
+  uploadedByUserId String
+  title            String
+  category         DocumentCategory
+  notes            String?
+  originalFileName String?
+  mimeType         String?
+  sizeBytes        Int?
+  storagePath      String?
+  expiresAt        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  household        Household        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  ownerMember      HouseholdMember  @relation(fields: [ownerMemberId], references: [id], onDelete: Cascade)
+  uploadedBy       User             @relation("DocumentUploader", fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@index([ownerMemberId])
+  @@index([category])
+  @@index([expiresAt])
+}
+
+model Event {
+  id               String          @id @default(uuid())
+  householdId      String
+  ownerMemberId    String
+  createdByUserId  String
+  title            String
+  description      String?
+  category         EventCategory
+  recurrence       EventRecurrence @default(NONE)
+  startsAt         DateTime
+  endsAt           DateTime?
+  reminderMinutes  Int?            // ex.: 15, 30, 60
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  household        Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  ownerMember      HouseholdMember @relation(fields: [ownerMemberId], references: [id], onDelete: Cascade)
+  createdBy        User            @relation("EventCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@index([ownerMemberId])
+  @@index([category])
+  @@index([startsAt])
+}

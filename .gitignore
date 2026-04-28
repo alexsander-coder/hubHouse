@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.next/
+coverage/
+uploads/
+*.log
+
+.env
+.env.*
+!.env.example
+
+apps/api/node_modules/
+apps/web/node_modules/
+apps/api/dist/
+apps/web/.next/
