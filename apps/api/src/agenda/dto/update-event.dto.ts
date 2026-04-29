@@ -14,25 +14,29 @@ import {
 } from 'class-validator';
 import { EventCategory, EventRecurrence } from '../../common/types/roles';
 
-export class CreateEventDto {
+export class UpdateEventDto {
+  @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(120)
-  title: string;
+  title?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(500)
   description?: string;
 
+  @IsOptional()
   @IsEnum(EventCategory)
-  category: EventCategory;
+  category?: EventCategory;
 
+  @IsOptional()
   @IsEnum(EventRecurrence)
-  recurrence: EventRecurrence;
+  recurrence?: EventRecurrence;
 
+  @IsOptional()
   @IsDateString()
-  startsAt: string;
+  startsAt?: string;
 
   @IsOptional()
   @IsDateString()
@@ -44,11 +48,13 @@ export class CreateEventDto {
   @Min(0)
   reminderMinutes?: number;
 
+  @IsOptional()
   @IsUUID()
-  ownerMemberId: string;
+  ownerMemberId?: string;
 
+  @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
   @IsUUID(undefined, { each: true })
-  participantMemberIds: string[];
+  participantMemberIds?: string[];
 }

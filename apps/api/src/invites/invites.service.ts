@@ -116,21 +116,6 @@ export class InvitesService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    if (invite.acceptedAt) {
-      throw new BusinessException(
-        BusinessErrorCode.CONVITE_JA_UTILIZADO,
-        'Este convite já foi utilizado.',
-        HttpStatus.CONFLICT,
-      );
-    }
-    if (invite.expiresAt.getTime() < Date.now()) {
-      throw new BusinessException(
-        BusinessErrorCode.CONVITE_EXPIRADO,
-        'Convite expirado.',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
     const user = await this.usersService.findById(userId);
     if (!user) {
       throw new BusinessException(
@@ -139,6 +124,7 @@ export class InvitesService {
         HttpStatus.NOT_FOUND,
       );
     }
+    this.ensureInviteCanBeAccepted(invite, user.email);
 
     const currentParticipationCount =
       await this.householdsService.countByUser(userId);
@@ -167,17 +153,82 @@ export class InvitesService {
     return { householdId: invite.householdId, acceptedAt };
   }
 
-  async listByUser(userId: string, householdId?: string) {
-    const whereClause = {
-      household: {
-        members: {
-          some: {
-            userId,
-          },
-        },
-      },
-      ...(householdId ? { householdId } : {}),
-    };
+  async acceptInviteById(inviteId: string, userId: string) {
+    const invite = await this.prisma.invite.findUnique({
+      where: { id: inviteId },
+    });
+    if (!invite) {
+      throw new BusinessException(
+        BusinessErrorCode.CONVITE_INVALIDO,
+        'Convite não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new BusinessException(
+        BusinessErrorCode.USUARIO_NAO_ENCONTRADO,
+        'Usuário não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    this.ensureInviteCanBeAccepted(invite, user.email);
+
+    const currentParticipationCount =
+      await this.householdsService.countByUser(userId);
+    const participationLimit =
+      await this.plansService.getParticipationLimit(userId);
+    if (currentParticipationCount >= participationLimit) {
+      throw new BusinessException(
+        BusinessErrorCode.PLANO_LIMITE_PARTICIPACAO,
+        `Limite do plano atingido: ${participationLimit} participação(ões) em lares permitida(s).`,
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    await this.householdsService.addMember(
+      invite.householdId,
+      userId,
+      invite.role as HouseholdRole,
+      invite.invitedByUserId,
+    );
+    const acceptedAt = new Date();
+    await this.prisma.invite.update({
+      where: { id: invite.id },
+      data: { acceptedAt },
+    });
+
+    return { householdId: invite.householdId, acceptedAt };
+  }
+
+  async listByUser(userId: string, householdId?: string, scope: 'sent' | 'received' = 'sent') {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new BusinessException(
+        BusinessErrorCode.USUARIO_NAO_ENCONTRADO,
+        'Usuário não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const whereClause =
+      scope === 'received'
+        ? {
+            email: user.email.toLowerCase(),
+            ...(householdId ? { householdId } : {}),
+          }
+        : {
+            household: {
+              members: {
+                some: {
+                  userId,
+                },
+              },
+            },
+            ...(householdId ? { householdId } : {}),
+          };
 
     const invites = await this.prisma.invite.findMany({
       where: whereClause,
@@ -211,5 +262,32 @@ export class InvitesService {
             ? 'EXPIRED'
             : 'PENDING',
     }));
+  }
+
+  private ensureInviteCanBeAccepted(
+    invite: { acceptedAt: Date | null; expiresAt: Date; email: string },
+    userEmail: string,
+  ) {
+    if (invite.acceptedAt) {
+      throw new BusinessException(
+        BusinessErrorCode.CONVITE_JA_UTILIZADO,
+        'Este convite já foi utilizado.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (invite.expiresAt.getTime() < Date.now()) {
+      throw new BusinessException(
+        BusinessErrorCode.CONVITE_EXPIRADO,
+        'Convite expirado.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (invite.email.toLowerCase() !== userEmail.toLowerCase()) {
+      throw new BusinessException(
+        BusinessErrorCode.CONVITE_INVALIDO,
+        'Este convite não pertence ao e-mail da sua conta.',
+        HttpStatus.FORBIDDEN,
+      );
+    }
   }
 }

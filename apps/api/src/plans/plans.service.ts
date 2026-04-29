@@ -7,6 +7,12 @@ export class PlansService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getPlanForUser(userId: string): Promise<PlanTier> {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const localBypassEnabled = process.env.ENABLE_LOCAL_PRO_BYPASS !== 'false';
+    if (!isProduction && localBypassEnabled) {
+      return PlanTier.PRO;
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { planTier: true },

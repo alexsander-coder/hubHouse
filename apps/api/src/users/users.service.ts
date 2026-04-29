@@ -115,4 +115,42 @@ export class UsersService {
       data: { refreshTokenHash: tokenHash },
     });
   }
+
+  async listNotifications(userId: string) {
+    const notifications = await this.prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+
+    const unreadCount = await this.prisma.notification.count({
+      where: { userId, isRead: false },
+    });
+
+    return {
+      unreadCount,
+      items: notifications.map((notification: (typeof notifications)[number]) => ({
+        id: notification.id,
+        eventId: notification.eventId,
+        title: notification.title,
+        message: notification.message,
+        isRead: notification.isRead,
+        createdAt: notification.createdAt,
+      })),
+    };
+  }
+
+  async markNotificationAsRead(userId: string, notificationId: string) {
+    await this.prisma.notification.updateMany({
+      where: { id: notificationId, userId },
+      data: { isRead: true, readAt: new Date() },
+    });
+  }
+
+  async markAllNotificationsAsRead(userId: string) {
+    await this.prisma.notification.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true, readAt: new Date() },
+    });
+  }
 }

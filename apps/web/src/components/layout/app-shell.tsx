@@ -25,13 +25,16 @@ const NAV_ITEMS: NavItem[] = [
   { key: "dashboard", label: "Dashboard", href: "/dashboard" },
   { key: "agenda", label: "Agenda", href: "/agenda" },
   { key: "documentos", label: "Documentos", href: "/documentos" },
+  { key: "despesas", label: "Despesas", href: "/despesas" },
   { key: "membros", label: "Membros", href: "/dashboard" },
-  { key: "convites", label: "Convites", href: "/dashboard" },
+  { key: "convites", label: "Convites", href: "/convites" },
   { key: "plano", label: "Plano", href: "/dashboard" },
   { key: "config", label: "Config", href: "/dashboard" },
 ];
 
-const MOBILE_ITEMS = NAV_ITEMS.slice(0, 4);
+const MOBILE_ITEMS = NAV_ITEMS.filter((item) =>
+  ["dashboard", "agenda", "documentos", "despesas", "convites"].includes(item.key),
+);
 
 export function AppShell({
   activeKey,
@@ -102,7 +105,7 @@ export function AppShell({
       </div>
 
       <nav className="fixed inset-x-2 bottom-2 z-20 rounded-2xl border border-slate-200/90 bg-white/95 p-1 shadow-xl backdrop-blur md:hidden dark:border-white/15 dark:bg-[#0c1220]/95">
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {MOBILE_ITEMS.map((item) => {
             const active = item.key === activeKey;
             return (

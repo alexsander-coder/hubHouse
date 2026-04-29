@@ -34,3 +34,14 @@ export enum EventRecurrence {
   WEEKLY = 'WEEKLY',
   MONTHLY = 'MONTHLY',
 }
+
+export enum BudgetCategory {
+  AGUA = 'AGUA',
+  LUZ = 'LUZ',
+  INTERNET = 'INTERNET',
+  CONDOMINIO = 'CONDOMINIO',
+  ALUGUEL = 'ALUGUEL',
+  GAS = 'GAS',
+  SUPERMERCADO = 'SUPERMERCADO',
+  OUTROS = 'OUTROS',
+}

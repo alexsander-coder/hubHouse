@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Param, Patch, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BusinessErrorCode } from '../common/errors/business-error-code';
@@ -72,6 +72,36 @@ export class UsersController {
         needsFirstHousehold: households.length === 0,
       },
       larEmDestaque,
+    };
+  }
+
+  @Get('me/notifications')
+  async getMyNotifications(@CurrentUser() user: { userId: string }) {
+    return {
+      code: SuccessCode.NOTIFICACOES_LISTADAS,
+      message: 'Notificações carregadas com sucesso.',
+      ...(await this.usersService.listNotifications(user.userId)),
+    };
+  }
+
+  @Patch('me/notifications/read-all')
+  async markAllNotificationsAsRead(@CurrentUser() user: { userId: string }) {
+    await this.usersService.markAllNotificationsAsRead(user.userId);
+    return {
+      code: SuccessCode.NOTIFICACAO_MARCADA_COMO_LIDA,
+      message: 'Todas as notificações foram marcadas como lidas.',
+    };
+  }
+
+  @Patch('me/notifications/:notificationId/read')
+  async markNotificationAsRead(
+    @CurrentUser() user: { userId: string },
+    @Param('notificationId') notificationId: string,
+  ) {
+    await this.usersService.markNotificationAsRead(user.userId, notificationId);
+    return {
+      code: SuccessCode.NOTIFICACAO_MARCADA_COMO_LIDA,
+      message: 'Notificação marcada como lida.',
     };
   }
 }

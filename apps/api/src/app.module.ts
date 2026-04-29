@@ -10,6 +10,7 @@ import { PlansModule } from './plans/plans.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { DocumentsModule } from './documents/documents.module';
 import { AgendaModule } from './agenda/agenda.module';
+import { BudgetsModule } from './budgets/budgets.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AgendaModule } from './agenda/agenda.module';
     PlansModule,
     DocumentsModule,
     AgendaModule,
+    BudgetsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

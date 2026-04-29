@@ -65,6 +65,12 @@ type InviteActivityItem = {
   status: "PENDING" | "ACCEPTED" | "EXPIRED";
 };
 
+type BudgetSummaryCard = {
+  month: string;
+  currentTotalCents: number;
+  diffTotalCents: number;
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -82,6 +88,7 @@ export default function DashboardPage() {
   const [inviteRole, setInviteRole] = useState<"ADMIN" | "EDITOR" | "VIEWER">("VIEWER");
   const [inviteFeedback, setInviteFeedback] = useState<string | null>(null);
   const [isInviting, setIsInviting] = useState(false);
+  const [budgetSummary, setBudgetSummary] = useState<BudgetSummaryCard | null>(null);
 
   useEffect(() => {
     const session = getSession();
@@ -131,6 +138,19 @@ export default function DashboardPage() {
         setHeaderEmail(meResponse.dados.user.email);
         setHouseholds(householdsResponse.dados.items);
         setInviteActivity(invitesResponse.dados.items);
+        if (meResponse.dados.plan.tier === "PRO" && meResponse.dados.larEmDestaque?.id) {
+          const monthRef = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+          const summaryResponse = await apiRequest<{ summary: BudgetSummaryCard }>(
+            `/budgets/households/${meResponse.dados.larEmDestaque.id}/summary?month=${monthRef}`,
+            {
+              method: "GET",
+              headers: { Authorization: `Bearer ${accessTokenFromSession}` },
+            },
+          );
+          setBudgetSummary(summaryResponse.dados.summary);
+        } else {
+          setBudgetSummary(null);
+        }
       } catch (error) {
         clearSession();
         setErrorMessage(error instanceof Error ? error.message : "Não foi possível carregar seu painel.");
@@ -182,6 +202,19 @@ export default function DashboardPage() {
     setHeaderEmail(meResponse.dados.user.email);
     setHouseholds(householdsResponse.dados.items);
     setInviteActivity(invitesResponse.dados.items);
+    if (meResponse.dados.plan.tier === "PRO" && meResponse.dados.larEmDestaque?.id) {
+      const monthRef = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+      const summaryResponse = await apiRequest<{ summary: BudgetSummaryCard }>(
+        `/budgets/households/${meResponse.dados.larEmDestaque.id}/summary?month=${monthRef}`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      );
+      setBudgetSummary(summaryResponse.dados.summary);
+    } else {
+      setBudgetSummary(null);
+    }
   }
 
   async function handleCreateHousehold() {
@@ -403,7 +436,7 @@ export default function DashboardPage() {
 
         {!isLoading && data ? (
           <>
-            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <div className="rounded-2xl border border-slate-200/90 bg-white/90 p-4 dark:border-white/10 dark:bg-white/5">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Plano atual</p>
                 <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{data.plan.tier}</p>
@@ -428,6 +461,15 @@ export default function DashboardPage() {
                 <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{completionPercentage}%</p>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {completedChecklistCount}/{checklist.length} etapas concluídas
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200/90 bg-white/90 p-4 dark:border-white/10 dark:bg-white/5">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Despesas do mês</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+                  {budgetSummary ? (budgetSummary.currentTotalCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "--"}
+                </p>
+                <p className={`mt-1 text-xs ${!budgetSummary ? "text-slate-500 dark:text-slate-400" : budgetSummary.diffTotalCents > 0 ? "text-red-600 dark:text-red-300" : budgetSummary.diffTotalCents < 0 ? "text-emerald-600 dark:text-emerald-300" : "text-slate-500 dark:text-slate-400"}`}>
+                  {budgetSummary ? `Variação: ${(budgetSummary.diffTotalCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : "Disponível no plano PRO"}
                 </p>
               </div>
             </section>

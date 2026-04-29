@@ -49,6 +49,17 @@ enum EventRecurrence {
   MONTHLY
 }
 
+enum BudgetCategory {
+  AGUA
+  LUZ
+  INTERNET
+  CONDOMINIO
+  ALUGUEL
+  GAS
+  SUPERMERCADO
+  OUTROS
+}
+
 model User {
   id                         String            @id @default(uuid())
   name                       String
@@ -68,6 +79,9 @@ model User {
   sentInvites                Invite[]          @relation("InviteCreator")
   uploadedDocuments          Document[]        @relation("DocumentUploader")
   createdEvents              Event[]           @relation("EventCreator")
+  notifications              Notification[]
+  budgetEntries              BudgetEntry[]
+  budgetGoals                BudgetGoal[]
 }
 
 model Household {
@@ -81,6 +95,9 @@ model Household {
   invites     Invite[]
   documents   Document[]
   events      Event[]
+  notifications Notification[]
+  budgetEntries BudgetEntry[]
+  budgetGoals   BudgetGoal[]
 
   @@index([ownerUserId])
 }
@@ -95,6 +112,7 @@ model HouseholdMember {
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   documents   Document[]
   events      Event[]
+  eventAssignments EventAssignment[]
 
   @@unique([householdId, userId])
   @@index([userId])
@@ -159,9 +177,74 @@ model Event {
   household        Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
   ownerMember      HouseholdMember @relation(fields: [ownerMemberId], references: [id], onDelete: Cascade)
   createdBy        User            @relation("EventCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  assignments      EventAssignment[]
+  notifications    Notification[]
 
   @@index([householdId])
   @@index([ownerMemberId])
   @@index([category])
   @@index([startsAt])
+}
+
+model EventAssignment {
+  id        String          @id @default(uuid())
+  eventId   String
+  memberId  String
+  createdAt DateTime        @default(now())
+  event     Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member    HouseholdMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, memberId])
+  @@index([memberId])
+}
+
+model Notification {
+  id          String    @id @default(uuid())
+  userId      String
+  householdId String?
+  eventId     String?
+  title       String
+  message     String
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household   Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  event       Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead, createdAt])
+}
+
+model BudgetEntry {
+  id           String         @id @default(uuid())
+  householdId  String
+  createdByUserId String
+  category     BudgetCategory
+  competenceMonth DateTime
+  amountCents  Int
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  household    Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy    User           @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([householdId, competenceMonth])
+  @@index([category])
+  @@unique([householdId, category, competenceMonth])
+}
+
+model BudgetGoal {
+  id              String         @id @default(uuid())
+  householdId     String
+  createdByUserId String
+  category        BudgetCategory
+  competenceMonth DateTime
+  targetCents     Int
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  household       Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy       User           @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([householdId, competenceMonth])
+  @@unique([householdId, category, competenceMonth])
 }

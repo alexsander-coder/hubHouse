@@ -52,15 +52,28 @@ export class InvitesController {
     };
   }
 
+  @Post(':inviteId/accept')
+  async acceptById(
+    @Param('inviteId') inviteId: string,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return {
+      code: SuccessCode.CONVITE_ACEITO,
+      message: 'Convite aceito com sucesso.',
+      acceptance: await this.invitesService.acceptInviteById(inviteId, user.userId),
+    };
+  }
+
   @Get('me')
   async listMine(
     @CurrentUser() user: { userId: string },
     @Query('householdId') householdId?: string,
+    @Query('scope') scope?: 'sent' | 'received',
   ) {
     return {
       code: SuccessCode.OPERACAO_SUCESSO,
       message: 'Convites carregados com sucesso.',
-      items: await this.invitesService.listByUser(user.userId, householdId),
+      items: await this.invitesService.listByUser(user.userId, householdId, scope ?? 'sent'),
     };
   }
 }
